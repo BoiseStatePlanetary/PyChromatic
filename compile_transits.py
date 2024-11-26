@@ -5,19 +5,17 @@ import json
 import matplotlib.pyplot as plt
 from utils import *
 
-
-def load_phot_data(PlanetName, ObservationDate, TransitDirectory, ExoticOutputDirectory):
-        txt_name = f"AAVSO_{PlanetName}_{ObservationDate}.txt"
-        data_directory = os.path.join(TransitDirectory, ExoticOutputDirectory)
-        phot_data = np.loadtxt(os.path.join(data_directory, txt_name), delimiter=",")
+# Use load_phot_data, parse_final_params, calc_model_fit, and plot_data_with_curve 
+def load_phot_data(PlanetName, ObservationDate, TransitDirectory, data_set):
+        txt_name = f"AAVSO_{PlanetName}_{ObservationDate}_{data_set}.txt"
+        phot_data = np.loadtxt(os.path.join(TransitDirectory, txt_name), delimiter=",")
         return {"BJD_TDB" : phot_data[:, 0], 
                 "flux" : phot_data[:, 1], 
                 "error" : phot_data[:, 2]}
 
-def parse_final_params(PlanetName, ObservationDate, TransitDirectory, ExoticOutputDirectory):
-        txt_name = f"AAVSO_{PlanetName}_{ObservationDate}.txt"
-        data_directory = os.path.join(TransitDirectory, ExoticOutputDirectory)     
-        with open(os.path.join(data_directory, txt_name)) as fn:
+def parse_final_params(PlanetName, ObservationDate, TransitDirectory, data_set):
+        txt_name = f"AAVSO_{PlanetName}_{ObservationDate}_{data_set}.txt"    
+        with open(os.path.join(TransitDirectory, txt_name)) as fn:
             for line in fn: 
                 if line.startswith("#RESULTS-XC"):
                     # extract the JSON-like string part
@@ -66,43 +64,67 @@ def calc_model_fit(transit_times, param_dict):
                                       param_dict["a/R*"], param_dict["inc"], param_dict["u"], limb_dark="nonlinear")
     return transit_model
 
-def plot_data_with_curve(PlanetName, ObservationDate, scope_name, TransitDirectory, ExoticOutputDirectory, color):
-    photdata = load_phot_data(PlanetName, ObservationDate, TransitDirectory, ExoticOutputDirectory)
+def plot_data_with_curve(PlanetName, ObservationDate, TransitDirectory, data_set, color, shift):
+    photdata = load_phot_data(PlanetName, ObservationDate, TransitDirectory, data_set)
     # calculate JD
     JD = int(photdata["BJD_TDB"][0])
     time = photdata["BJD_TDB"] - JD
     # calculate model 
-    params = parse_final_params(PlanetName, ObservationDate, TransitDirectory, ExoticOutputDirectory)
-    model = calc_model_fit(photdata["flux"], params)
-    # str = f'Mid-Transit Time (Tmid):\n{params["Tmid"]}+/-{params["Tmid_unc"]}BJD_TDB\nTransit Depth (Rp/R*)^2:\n{params["Rp/R*"]**2}+/-{params["Rp/R*"]**2}'
-    # plt.text(photdata["flux"][-1]+0.0125, y_val, str, fontsize=12, color=color)
-    # plot RED data & curve
-    plt.errorbar(time, photdata["flux"], yerr=photdata["error"], color=color, marker='.', ls='none', alpha=0.7, label=scope_name)
-    plt.plot(time, model, lw=3.0, color=color)
-    plt.plot(np.repeat(params["Tmid"]-JD,10), np.linspace(0.5, 1.2, 10), alpha=0.9, linestyle="--", color=color, zorder=0, linewidth=1.0) 
+    params = parse_final_params(PlanetName, ObservationDate, TransitDirectory, data_set)
+    model = calc_model_fit(photdata["BJD_TDB"], params)
+    str = f'Mid-Transit Time (Tmid):\n{params["Tmid"]-JD:.6f}+/-{params["Tmid_unc"]:.6f}BJD_TDB \n Rp/R*: {params["Rp/R*"]} +/- {params["Rp/R*_unc"]}'
+    plt.text(time[-1]+0.0125, 1+shift, str, fontsize=12, color=color)
+    
+    plt.errorbar(time, photdata["flux"]+shift, yerr=photdata["error"], color=color, marker='.', markersize=5, ls='none', alpha=0.3, label=data_set)
+    plt.plot(time, model+shift, lw=3.0, color=color)
+    tmid_x = np.repeat(params["Tmid"]-JD,10)
+    tmid_y = np.linspace(0.85, 1.6, 10)
+    plt.plot(tmid_x, tmid_y, alpha=0.9, linestyle="--", color=color, zorder=0, linewidth=1.0)
+    plt.fill_betweenx(tmid_y, tmid_x - params["Tmid_unc"], tmid_x + params["Tmid_unc"], color=color, alpha=0.5) 
     
     plt.title(f"{PlanetName}  {ObservationDate}")
-    # plt.subplots_adjust(left=0.075, right=0.6, top=0.926, bottom=0.092)
-    plt.ylim(0.7, 1.3)
+    plt.legend()
+    plt.ylim(0.875, 1.05)
+    plt.subplots_adjust(left=0.065, right=0.6, top=0.926, bottom=0.092)
     plt.xlabel(f"Transit Mid-time (BJD_TDB) -{JD}")
     plt.ylabel("Relative Flux")
 
+def plot_data(PlanetName, ObservationDate, TransitDirectory, data_set, color, shift):
+    photdata = load_phot_data(PlanetName, ObservationDate, TransitDirectory, data_set)
+    # calculate JD
+    JD = int(photdata["BJD_TDB"][0])
+    time = photdata["BJD_TDB"] - JD
+    plt.errorbar(time, photdata["flux"]+shift, yerr=photdata["error"], color=color, marker='.', ls='none', alpha=0.7, label=data_set)
+    # plt.plot(np.repeat(params["Tmid"]-JD,10), np.linspace(0.5, 1.2, 10), alpha=0.9, linestyle="--", color=color, zorder=0, linewidth=1.0) 
 
-def plot_multiple_curves(PlanetName, ObservationDate, TransitDirectory, compile_list):
-    y_val = 1.38
-    colors = [BoiseState_blue, BoiseState_orange, "g"]
+
+
+def plot_multiple_curves(PlanetName, ObservationDate, TransitDirectory, compile_list, shifts):
     plt.figure(figsize=(9, 6))
-    for color, data_set in enumerate(compile_list):
-        y_val -= 0.23
-        plot_data_with_curve(PlanetName, ObservationDate, data_set, os.path.join(TransitDirectory, data_set), "output_green", colors[color])
+    color_dict = {"barbie" : "k",
+                  "renormal_barbie": "fuchsia", 
+                  "g" : "g", 
+                  "r" : "r", 
+                  "b" : "b", 
+                  "gray" : "dimgrey", 
+                  "d" : "k", 
+                  "d_f" : "dimgrey", 
+                  "d_f_df" : "navy"}
+    for idx, data_set in enumerate(compile_list):
+        if data_set == "aiwzhv":
+            plot_data(PlanetName, ObservationDate, TransitDirectory, data_set, color_dict[data_set], shifts[idx])
+        else:
+            plot_data_with_curve(PlanetName, ObservationDate, TransitDirectory, data_set, color_dict[data_set], shifts[idx])
     
-    plt.savefig(f"Compiled_LC_{PlanetName}_{ObservationDate}.png", dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(TransitDirectory, f"Compiled_LC_{PlanetName}_{ObservationDate}.png"), dpi=300, bbox_inches='tight')
     plt.close()
+    # plt.show()
 
 if __name__ == "__main__":
     home_dir = os.path.expanduser('~')
-    maintransit_dir = os.path.join(home_dir, "TrES3b_85")
+    maintransit_dir = os.path.join(home_dir, "TrES-3b_Stacked_615")
     planet_name = "TrES-3 b"
-    date = "05-08-2024"
-    compile_list = ["Annie", "Hypatia", "Melba"]
-    plot_multiple_curves(planet_name, date, maintransit_dir, compile_list)
+    date = "15-06-2024"
+    compile_list = ["barbie", "renormal_barbie"]
+    shifts=[-0.05, 0, 0.05, 0.1]
+    plot_multiple_curves(planet_name, date, maintransit_dir, compile_list, shifts)
