@@ -95,11 +95,48 @@ def plot_data(PlanetName, ObservationDate, TransitDirectory, data_set, color, sh
     JD = int(photdata["BJD_TDB"][0])
     time = photdata["BJD_TDB"] - JD
     plt.errorbar(time, photdata["flux"]+shift, yerr=photdata["error"], color=color, marker='.', ls='none', alpha=0.7, label=data_set)
-    # plt.plot(np.repeat(params["Tmid"]-JD,10), np.linspace(0.5, 1.2, 10), alpha=0.9, linestyle="--", color=color, zorder=0, linewidth=1.0) 
+    # plt.plot(np.repeat(params["Tmid"]-JD,10), np.linspace(0.5, 1.2, 10), alpha=0.9, linestyle="--", color=color, zorder=0, linewidth=1.0)
+ 
+def plot_diff(PlanetName, ObservationDate, TransitDirectory, data_sets, standard, color, shift):
+    #load data from the observation that data will be subtracted from. The "standard"
+    standard_dat = load_phot_data(PlanetName, ObservationDate, TransitDirectory, standard)
+    for idx, data in enumerate(data_sets):
+        photdata = load_phot_data(PlanetName, ObservationDate, TransitDirectory, data)
+        new_JD = int(photdata["BJD_TDB"][0]) 
+        new_time = photdata["BJD_TDB"] - new_JD
+        y = photdata["flux"] - standard_dat["flux"]
+        plt.plot(new_time, y, color=color[idx], marker='.', ls='none', alpha=0.7, label=f"{data} - {standard}")
+        plt.plot(np.linspace(new_time[0], new_time[-1], 25), np.repeat(0, 25), color=color[idx], marker=None)
+    plt.title("Calibration Difference Plot")
+    plt.legend()
+    plt.xlabel(f"Transit Mid-time (BJD_TDB) -{new_JD}")
+    plt.ylabel("Difference in Rel. Flux")
+    plt.show()
 
+def plot_diff_from_curve(PlanetName, ObservationDate, TransitDirectory, data_set, color, shift):
+    photdata = load_phot_data(PlanetName, ObservationDate, TransitDirectory, data_set)
+    # calculate JD
+    JD = int(photdata["BJD_TDB"][0])
+    time = photdata["BJD_TDB"] - JD
+    # calculate model 
+    params = parse_final_params(PlanetName, ObservationDate, TransitDirectory, data_set)
+    model = calc_model_fit(photdata["BJD_TDB"], params)
+    # str = f'Mid-Transit Time (Tmid):\n{params["Tmid"]-JD:.6f}+/-{params["Tmid_unc"]:.6f}BJD_TDB \n Rp/R*: {params["Rp/R*"]} +/- {params["Rp/R*_unc"]}'
+    # plt.text(time[-1]+0.0125, 1+shift, str, fontsize=12, color=color)
+    
+    plt.plot(time, photdata["flux"]-model, color=color, marker='.', markersize=5, ls='none', alpha=0.9, label=data_set)
+    plt.plot(time, np.repeat(0, len(time)), lw=1.0, color='k')
+    # tmid_x = np.repeat(params["Tmid"]-JD,10)
+    # tmid_y = np.linspace(0.85, 1.6, 10)
+    # plt.plot(tmid_x, tmid_y, alpha=0.9, linestyle="--", color=color, zorder=0, linewidth=1.0)
+    # plt.fill_betweenx(tmid_y, tmid_x - params["Tmid_unc"], tmid_x + params["Tmid_unc"], color=color, alpha=0.5) 
+    
+    plt.title(f"{PlanetName}  {ObservationDate} Difference From Model")
+    plt.legend()
+    plt.xlabel(f"Transit Mid-time (BJD_TDB) -{JD}")
+    plt.ylabel("Difference of Rel. Flux")
 
-
-def plot_multiple_curves(PlanetName, ObservationDate, TransitDirectory, compile_list, shifts):
+def plot_multiple_curves(PlanetName, ObservationDate, TransitDirectory, compile_list, shifts, diff=False):
     plt.figure(figsize=(9, 6))
     color_dict = {"barbie" : "k",
                   "renormal_barbie": "fuchsia", 
@@ -110,21 +147,28 @@ def plot_multiple_curves(PlanetName, ObservationDate, TransitDirectory, compile_
                   "d" : "k", 
                   "d_f" : "dimgrey", 
                   "d_f_df" : "navy"}
-    for idx, data_set in enumerate(compile_list):
-        if data_set == "aiwzhv":
-            plot_data(PlanetName, ObservationDate, TransitDirectory, data_set, color_dict[data_set], shifts[idx])
-        else:
-            plot_data_with_curve(PlanetName, ObservationDate, TransitDirectory, data_set, color_dict[data_set], shifts[idx])
-    
-    plt.savefig(os.path.join(TransitDirectory, f"Compiled_LC_{PlanetName}_{ObservationDate}.png"), dpi=300, bbox_inches='tight')
-    plt.close()
+    if diff == True:
+        for idx, data_set in enumerate(compile_list):
+            plot_diff_from_curve(PlanetName, ObservationDate, TransitDirectory, data_set, color_dict[data_set], shifts[idx])
+        plt.savefig(os.path.join(TransitDirectory, f"Difference_LC_{PlanetName}_{ObservationDate}.png"), dpi=300, bbox_inches='tight')
+        plt.close()
+    else:
+        for idx, data_set in enumerate(compile_list):
+            if data_set == "aiwzhv":
+                plot_data(PlanetName, ObservationDate, TransitDirectory, data_set, color_dict[data_set], shifts[idx])
+            else:
+                plot_data_with_curve(PlanetName, ObservationDate, TransitDirectory, data_set, color_dict[data_set], shifts[idx])
+        
+        plt.savefig(os.path.join(TransitDirectory, f"Compiled_LC_{PlanetName}_{ObservationDate}.png"), dpi=300, bbox_inches='tight')
+        plt.close()
     # plt.show()
 
 if __name__ == "__main__":
     home_dir = os.path.expanduser('~')
-    maintransit_dir = os.path.join(home_dir, "TrES-3b_Stacked_615")
+    maintransit_dir = os.path.join(home_dir, "TrES-3b_Stacked_615", "AAVSO_reports_grey_calibration")
     planet_name = "TrES-3 b"
     date = "15-06-2024"
-    compile_list = ["barbie", "renormal_barbie"]
+    compile_list = ["d", "d_f", "d_f_df"]
     shifts=[-0.05, 0, 0.05, 0.1]
-    plot_multiple_curves(planet_name, date, maintransit_dir, compile_list, shifts)
+    plot_multiple_curves(planet_name, date, maintransit_dir, compile_list, shifts, diff=True)
+
