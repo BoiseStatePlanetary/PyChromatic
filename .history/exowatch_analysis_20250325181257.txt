@@ -1,0 +1,12 @@
+Upon further inspection, there are 36 light curves from Exoplanet Watch that are not included in the ephemeris calculations. 
+Out of these, 15 of them are more recent than the data in Athano+. 
+8 of the 15 have the observer code TESS... which can't be found in AAVSO.. so are these from TESS?
+
+The remaining 7 transits are: 
+Epoch:  1497 Tc: 2459832.696 Obs:  HBRG 
+Epoch:  1498 Tc: 2459832.733 Obs:  CPHB
+Epoch:  1517 Tc: 2459888.6553 Obs:  ANAE - link: https://exoplanets.nasa.gov/exoplanet_watch_results/hat-p-37_b/#observations_0010437
+Epoch:  1551 Tc: 2459980.994 Obs:  CZAA
+Epoch:  1645 Tc: 2460243.9462 Obs:  AGRB
+Epoch:  1650 Tc: 2460260.708 Obs:  AGRB 
+Epoch:  1760 Tc: 2460565.6633 Obs:  MKEE

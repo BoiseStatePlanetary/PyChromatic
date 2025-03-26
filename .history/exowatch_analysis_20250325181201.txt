@@ -1,0 +1,5 @@
+Upon further inspection, there are 36 light curves from Exoplanet Watch that are not included in the ephemeris calculations. 
+Out of these, 15 of them are more recent than the data in Athano+. 
+8 of the 15 have the observer code TESS... which can't be found in AAVSO.. so are these from TESS?
+
+The remaining 

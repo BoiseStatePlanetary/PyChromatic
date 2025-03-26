@@ -1,0 +1,1 @@
+Upon further inspection, there are 36 light curves from Exoplanet Watch that are not included in the ephemeris calculations. 

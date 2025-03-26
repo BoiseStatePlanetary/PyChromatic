@@ -1,0 +1,1 @@
+# quick routine to renormalize 
