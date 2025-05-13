@@ -174,7 +174,7 @@ if __name__ == "__main__":
     # make_susie_plot(json_name, elisabeth_file)
 
     hatp37_exowatch = "HAT-P-37 b.json"
-    read_exoWatch_json_data(hatp37_exowatch)
+    # read_exoWatch_json_data(hatp37_exowatch)
     # susie_for_exowatch_only(hatp37_exowatch)
-    # make_susie_plot_Athano_exowatch(hatp37_exowatch)
+    make_susie_plot_Athano_exowatch(hatp37_exowatch)
     

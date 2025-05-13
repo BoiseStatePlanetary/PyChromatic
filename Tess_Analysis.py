@@ -10,9 +10,11 @@ def search_database(target_name="HAT-P-37"):
     print(light_curves_24)
     lc_collection = light_curves_24.download_all()
     for lc in lc_collection:
-        start_time = lc.time[0]
-        df = lc.to_pandas()
-        df.to_csv(f"{target_name}_{start_time}_TESS.csv")
+        lc.plot()
+    plt.show()
+        # start_time = lc.time[0]
+        # df = lc.to_pandas()
+        # df.to_csv(f"{target_name}_{start_time}_TESS.csv")
 
 
 if __name__ == "__main__":
